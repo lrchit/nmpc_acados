@@ -35,15 +35,15 @@ def omega2rpydot(rpy, omega):
     rpy_dot = ca.SX(3, 1)
     trans_mat = ca.SX.eye(3)
 
-    trans_mat[0, 0] = ca.cos(rpy[2]) / ca.cos(rpy[1])
-    trans_mat[0, 1] = ca.sin(rpy[2]) / ca.cos(rpy[1])
-    trans_mat[0, 2] = 0
-    trans_mat[1, 0] = -ca.sin(rpy[2])
-    trans_mat[1, 1] = ca.cos(rpy[2])
-    trans_mat[1, 2] = 0
-    trans_mat[2, 0] = ca.cos(rpy[2]) * ca.tan(rpy[1])
-    trans_mat[2, 1] = ca.sin(rpy[2]) * ca.tan(rpy[1])
-    trans_mat[2, 2] = 1
+    trans_mat[0, 0] = 1
+    trans_mat[0, 1] = ca.sin(rpy[0]) * ca.tan(rpy[1])
+    trans_mat[0, 2] = ca.cos(rpy[0]) * ca.tan(rpy[1])
+    trans_mat[1, 0] = 0
+    trans_mat[1, 1] = ca.cos(rpy[0])
+    trans_mat[1, 2] = ca.sin(rpy[0])
+    trans_mat[2, 0] = 0
+    trans_mat[2, 1] = ca.sin(rpy[0]) / ca.cos(rpy[1])
+    trans_mat[2, 2] = ca.cos(rpy[0]) / ca.cos(rpy[1])
 
     rpy_dot = trans_mat @ omega
 
@@ -66,9 +66,8 @@ def vec2mat(vector):
 
 # 单刚体动力学SRBD模型
 class SRBD_Model(object):
-    def __init__(
-        self,
-    ):
+
+    def __init__(self, ):
         model = AcadosModel()
         model.name = "srbd"
 
@@ -76,7 +75,7 @@ class SRBD_Model(object):
         inertia[0, 0] = 0.07
         inertia[1, 1] = 0.26
         inertia[2, 2] = 0.242
-        mass = 8.9
+        mass = 9
         g = [0, 0, 9.81]
 
         state_vars = ca.SX.sym("state_vars", 12)
@@ -87,20 +86,16 @@ class SRBD_Model(object):
         x_drag = ca.SX.sym("x_drag", 1)
 
         rotation_mat = rpy2rot(state_vars[6:9])
-        inertia_inv = ca.inv(rotation_mat @ inertia @ rotation_mat.T)
+        inertia_inv = ca.inv(inertia)
 
-        tau = (
-            ca.cross(feet_state[0:3] - state_vars[0:3], control_vars[0:3], -1)
-            + ca.cross(feet_state[3:6] - state_vars[0:3], control_vars[3:6], -1)
-            + ca.cross(feet_state[6:9] - state_vars[0:3], control_vars[6:9], -1)
-            + ca.cross(feet_state[9:12] - state_vars[0:3], control_vars[9:12], -1)
-        )
-        f = (
-            control_vars[0:3]
-            + control_vars[3:6]
-            + control_vars[6:9]
-            + control_vars[9:12]
-        )
+        tau = (ca.cross(feet_state[0:3] - state_vars[0:3], control_vars[0:3],
+                        -1) + ca.cross(feet_state[3:6] - state_vars[0:3],
+                                       control_vars[3:6], -1) +
+               ca.cross(feet_state[6:9] - state_vars[0:3], control_vars[6:9],
+                        -1) + ca.cross(feet_state[9:12] - state_vars[0:3],
+                                       control_vars[9:12], -1))
+        f = (control_vars[0:3] + control_vars[3:6] + control_vars[6:9] +
+             control_vars[9:12])
 
         # 状态空间
         state_space = ca.vertcat(
@@ -108,7 +103,8 @@ class SRBD_Model(object):
             f / mass - g,
             omega2rpydot(state_vars[6:9], state_vars[9:12]),
             inertia_inv
-            @ (tau - vec2mat(state_vars[9:12]) @ (inertia @ state_vars[9:12])),
+            @ (rotation_mat.T @ tau -
+               vec2mat(state_vars[9:12]) @ (inertia @ state_vars[9:12])),
         )
         state_space[5] += x_drag
 
@@ -127,29 +123,23 @@ class SRBD_Model(object):
         mu = 0.4
         nonlinear_constraint = ca.SX.sym("nonlinear_constraint", 20)
         for i in range(4):
-            nonlinear_constraint[i * 5 + 0] = (
-                control_vars[i * 3 + 0] - mu * control_vars[i * 3 + 2]
-            )
-            nonlinear_constraint[i * 5 + 1] = (
-                control_vars[i * 3 + 1] - mu * control_vars[i * 3 + 2]
-            )
-            nonlinear_constraint[i * 5 + 2] = (
-                control_vars[i * 3 + 0] + mu * control_vars[i * 3 + 2]
-            )
-            nonlinear_constraint[i * 5 + 3] = (
-                control_vars[i * 3 + 1] + mu * control_vars[i * 3 + 2]
-            )
+            nonlinear_constraint[i * 5 + 0] = (control_vars[i * 3 + 0] -
+                                               mu * control_vars[i * 3 + 2])
+            nonlinear_constraint[i * 5 + 1] = (control_vars[i * 3 + 1] -
+                                               mu * control_vars[i * 3 + 2])
+            nonlinear_constraint[i * 5 + 2] = (control_vars[i * 3 + 0] +
+                                               mu * control_vars[i * 3 + 2])
+            nonlinear_constraint[i * 5 + 3] = (control_vars[i * 3 + 1] +
+                                               mu * control_vars[i * 3 + 2])
             nonlinear_constraint[i * 5 + 4] = control_vars[i * 3 + 2]
 
         model.con_h_expr = nonlinear_constraint
 
         constraint = ca.types.SimpleNamespace()
         constraint.lower_bound = np.array(
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        )
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         constraint.upper_bound = np.array(
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        )
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
         self.model = model
         self.constraint = constraint

@@ -16,17 +16,16 @@ int main() {
   // contact point
   VectorXd p_feet(12 * horizons);
   for (int i = 0; i < horizons; i++) {
-    p_feet.block(12 * i, 0, 12, 1) << 0.209426, -0.109557, -0.003, 0.214422,
-        0.114664, -0.003, -0.165504, -0.113441, -0.003, -0.169422, 0.11112,
-        -0.003;
+    p_feet.block(12 * i, 0, 12, 1) << 0.4, -0.2, -0.5, 0.4, 0.2, -0.5, -0.4,
+        -0.2, -0.5, -0.4, 0.2, -0.5;
   }
 
-  double vel_x = 0.1;
-  double vel_y = 0.05;
-  double vel_z = 0.1;
+  double vel_x = 0.;
+  double vel_y = 0.0;
+  double vel_z = 0.;
   double vel_roll = 0.;
   double vel_pitch = 0;
-  double vel_yaw = 0.5;
+  double vel_yaw = 0.;
   VectorXd current_state;
   current_state.setZero(12);
   current_state << 0, 0, 0, vel_x, vel_y, vel_z, 0, 0, 0, vel_roll, vel_pitch,

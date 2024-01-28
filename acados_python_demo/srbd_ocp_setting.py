@@ -25,6 +25,7 @@ def safe_mkdir_recursive(directory, overwrite=False):
 
 
 class SRBD_Optimizer(object):
+
     def __init__(self, _model, _constraint, t_horizon, n_nodes, debug_state):
         model = _model
         self.T = t_horizon
@@ -117,8 +118,8 @@ class SRBD_Optimizer(object):
         ocp.solver_options.integrator_type = "ERK"
         ocp.solver_options.print_level = 0
         ocp.solver_options.nlp_solver_type = "SQP_RTI"
-        ocp.solver_options.nlp_solver_max_iter = 100
-        ocp.solver_options.hpipm_mode = "SPEED_ABS"
+        ocp.solver_options.nlp_solver_max_iter = 1000
+        ocp.solver_options.hpipm_mode = "BALANCE"
         ocp.solver_options.nlp_solver_tol_stat = 1e-6
         ocp.solver_options.nlp_solver_tol_eq = 1e-8
         ocp.solver_options.nlp_solver_tol_ineq = 1e-8
@@ -129,9 +130,11 @@ class SRBD_Optimizer(object):
         if debug_state:
             self.solver = AcadosOcpSolver(ocp, json_file=json_file)
         else:
-            self.solver = AcadosOcpSolver(
-                ocp, json_file=json_file, build=False, generate=False, verbose=False
-            )
+            self.solver = AcadosOcpSolver(ocp,
+                                          json_file=json_file,
+                                          build=False,
+                                          generate=False,
+                                          verbose=False)
 
     #     # 用自带的积分器进行仿真
     #     sim = AcadosSim()
