@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(nmpc_caller LANGUAGES C CXX)
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "-std=c++11 -O3")
 
 # for macOS
 set(CMAKE_MACOSX_RPATH 1)

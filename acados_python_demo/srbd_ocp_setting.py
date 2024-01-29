@@ -110,6 +110,7 @@ class SRBD_Optimizer(object):
 
         # solver options，使用HPIPM求解，用高斯牛顿法求Hessian矩阵
         ocp.solver_options.qp_solver = "PARTIAL_CONDENSING_HPIPM"
+        ocp.solver_options.ext_fun_compile_flags = "-O3"
         ocp.solver_options.hessian_approx = "GAUSS_NEWTON"
         ocp.solver_options.qp_solver_warm_start = 0
         ocp.solver_options.qp_solver_ric_alg = 0
@@ -119,7 +120,7 @@ class SRBD_Optimizer(object):
         ocp.solver_options.print_level = 0
         ocp.solver_options.nlp_solver_type = "SQP_RTI"
         ocp.solver_options.nlp_solver_max_iter = 1000
-        ocp.solver_options.hpipm_mode = "BALANCE"
+        ocp.solver_options.hpipm_mode = "SPEED_ABS"
         ocp.solver_options.nlp_solver_tol_stat = 1e-6
         ocp.solver_options.nlp_solver_tol_eq = 1e-8
         ocp.solver_options.nlp_solver_tol_ineq = 1e-8
